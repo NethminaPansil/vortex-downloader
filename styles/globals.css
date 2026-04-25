@@ -1,54 +1,122 @@
+/* styles/globals.css */
+html,
 body {
+  padding: 0;
   margin: 0;
-  background: #0a0a0a;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* තද පැහැති gradient පසුබිමක් */
+  background: radial-gradient(circle at center, #1a1a2e 0%, #16213e 50%, #0f0f0f 100%);
   color: white;
-  font-family: Arial;
+  height: 100vh;
+  overflow: hidden;
 }
 
-.container {
-  text-align: center;
-  margin-top: 80px;
-}
-
-.title {
-  color: #00fff2;
-  text-shadow: 0 0 20px #00fff2;
-}
-
-.input {
-  padding: 12px;
-  width: 300px;
-  border-radius: 8px;
-  border: none;
-  margin-top: 20px;
-}
-
-.btn {
-  margin-top: 15px;
-  padding: 10px 20px;
-  background: #00fff2;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.card {
-  margin-top: 30px;
+/* Glassy Card එක */
+.glass-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
   padding: 20px;
-  background: #111;
-  border-radius: 12px;
-  box-shadow: 0 0 20px #00fff2;
-  display: inline-block;
 }
 
-.thumb {
-  width: 200px;
-  border-radius: 10px;
+.glass-card {
+  background: rgba(255, 255, 255, 0.05); /* ඉතා අඩු transparency */
+  backdrop-filter: blur(15px) saturate(180%); /* Blur සහ saturation */
+  -webkit-backdrop-filter: blur(15px) saturate(180%);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* සිහින් border එකක් */
+  padding: 40px;
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Shadow එක */
+  box-sizing: border-box;
 }
 
-.dl {
-  display: block;
-  margin-top: 10px;
+/* Title එක Glow effect එකක් සහිතව */
+.title {
+  font-size: 28px;
+  margin-top: 0;
   color: #00fff2;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px #00fff2, 0 0 20px #00fff2; /* Neon Glow */
+}
+
+/* Input field එක glassy පෙනුමක් ඇතිව */
+.input-glass {
+  width: 100%;
+  padding: 15px;
+  margin: 25px 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.input-glass:focus {
+  border-color: rgba(0, 255, 242, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 10px rgba(0, 255, 242, 0.2);
+}
+
+/* Download button එක Neon look එකක් සහිතව */
+.btn-neon {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(58, 123, 213, 0.4);
+  transition: all 0.3s ease;
+}
+
+.btn-neon:hover {
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-neon:disabled {
+  background: #555;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Result card එක */
+.result-card {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.thumb-img {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 12px;
+  border: 2px solid rgba(0, 255, 242, 0.3);
+  margin-bottom: 15px;
+}
+
+.download-link {
+  display: inline-block;
+  color: #00fff2;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 18px;
+  text-shadow: 0 0 10px #00fff2;
+  transition: all 0.2s ease;
+}
+
+.download-link:hover {
+  transform: scale(1.05);
 }
