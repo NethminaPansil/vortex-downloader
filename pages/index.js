@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Head from "next/head"; // Google Fonts load කරගැනීමට
+import Head from "next/head";
 
 export default function Home() {
   const [url, setUrl] = useState("");
@@ -29,105 +29,171 @@ export default function Home() {
   return (
     <>
       <Head>
-        {/* 'Vortex' නම සඳහා Orbitron font එක load කරගැනීම */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+        <title>Vortex Music | Downloader</title>
+        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
       </Head>
 
-      <div className="glass-container">
-        {/* යාවත්කාලීන කළ CSS */}
+      <div className="main-wrapper">
         <style dangerouslySetInnerHTML={{ __html: `
-          body { margin: 0; padding: 0; background: #0f172a; height: 100vh; font-family: 'Poppins', sans-serif; -webkit-font-smoothing: antialiased; }
-          
-          .glass-container {
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; background: radial-gradient(circle at center, #1e293b, #0f172a);
+          body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Poppins', sans-serif;
+            background-color: #05010a; /* Fallback color */
+          }
+
+          .main-wrapper {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
             box-sizing: border-box;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            /* Default: PC Background */
+            background-image: linear-gradient(rgba(5, 1, 10, 0.7), rgba(5, 1, 10, 0.7)), url('https://pmd-img2url.koyeb.app/v/37b283cde9b2b713cccf287a39212e37.jpg');
           }
-          
+
+          /* Mobile Screen එකකදී Background එක වෙනස් කිරීම */
+          @media (max-width: 768px) {
+            .main-wrapper {
+              background-image: linear-gradient(rgba(5, 1, 10, 0.7), rgba(5, 1, 10, 0.7)), url('https://pmd-img2url.koyeb.app/v/d298774c05692f31633940598b648509.jpg');
+            }
+          }
+
           .glass-card {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 40px; border-radius: 30px;
-            width: 100%; max-width: 420px; text-align: center;
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7);
-            box-sizing: border-box;
+            background: rgba(15, 2, 25, 0.6); /* කලු දම් පාට Glass effect එක */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(138, 43, 226, 0.2);
+            padding: 40px 30px;
+            border-radius: 35px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(138, 43, 226, 0.1);
           }
-          
-          /* Emoji නැති, ලස්සන Font එකක් සහිත Title එක */
+
           .vortex-title {
             font-family: 'Orbitron', sans-serif;
-            color: #fff;
-            font-size: 36px;
+            color: #bd93f9; /* දම් පාට Glow එක */
+            font-size: 38px;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            margin: 0 0 5px 0;
-            text-shadow: 0 0 10px #06b6d4, 0 0 20px #06b6d4, 0 0 30px #06b6d4;
+            letter-spacing: 4px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(189, 147, 249, 0.8);
           }
-          
+
           .sub-title {
-            color: #94a3b8; font-size: 14px; margin-bottom: 25px; font-weight: 400;
+            color: #a29bfe;
+            font-size: 13px;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+            opacity: 0.8;
           }
-          
+
           .input-glass {
-            width: 100%; padding: 15px; margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.05); border: 1px solid #334155;
-            border-radius: 14px; color: white; outline: none; box-sizing: border-box;
-            font-size: 14px; transition: all 0.3s ease;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(138, 43, 226, 0.3);
+            border-radius: 15px;
+            color: #efefef;
+            outline: none;
+            box-sizing: border-box;
+            transition: 0.3s;
           }
-          .input-glass:focus { border-color: #06b6d4; box-shadow: 0 0 10px rgba(6, 182, 212, 0.2); }
-          
+
+          .input-glass:focus {
+            border-color: #bd93f9;
+            box-shadow: 0 0 10px rgba(189, 147, 249, 0.3);
+          }
+
           .btn-neon {
-            width: 100%; padding: 15px; background: #06b6d4;
-            border: none; border-radius: 14px; color: white;
-            font-weight: 600; cursor: pointer; transition: 0.3s;
-            text-transform: uppercase; letter-spacing: 1px; font-size: 14px;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            border: none;
+            border-radius: 15px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.3s;
+            box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
           }
-          .btn-neon:hover { background: #0891b2; box-shadow: 0 0 25px #06b6d4; transform: translateY(-1px); }
-          .btn-neon:active { transform: translateY(1px); }
-          
-          /* Result Card එක */
-          .result-card { margin-top: 35px; border-top: 1px solid #334155; padding-top: 25px; text-align: left; }
-          
-          /* Thumbnail එක සඳහා Glassy Glow Frame එක */
+
+          .btn-neon:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(108, 92, 231, 0.5);
+          }
+
+          .result-card {
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(138, 43, 226, 0.2);
+          }
+
           .thumb-frame {
             width: 100%;
-            padding: 6px;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 18px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.2), inset 0 0 10px rgba(6, 182, 212, 0.1);
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            border: 1px solid rgba(138, 43, 226, 0.3);
             margin-bottom: 15px;
             box-sizing: border-box;
-            overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
           }
-          .thumb-img { width: 100%; border-radius: 12px; }
-          
-          /* Video Title එක */
-          .video-title { color: #f1f5f9; font-size: 14px; margin-bottom: 15px; font-weight: 400; line-height: 1.5; }
-          .video-title strong { color: #06b6d4; font-weight: 600; } /* 'Title:' කොටස සඳහා */
-          
+
+          .thumb-img {
+            width: 100%;
+            border-radius: 14px;
+            display: block;
+          }
+
+          .video-title {
+            color: #eee;
+            font-size: 14px;
+            margin: 10px 0 20px 0;
+            text-align: left;
+            line-height: 1.4;
+          }
+
+          .video-title span {
+            color: #bd93f9;
+            font-weight: 600;
+            margin-right: 5px;
+          }
+
           .download-link {
-            color: #22d3ee; text-decoration: none; font-weight: 600; font-size: 16px;
-            display: flex; align-items: center; gap: 8px; justify-content: center;
-            text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;
+            color: #f8a5c2;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.3s;
           }
-          .download-link:hover { color: #fff; text-shadow: 0 0 10px #22d3ee; }
+
+          .download-link:hover {
+            color: #fff;
+            text-shadow: 0 0 10px #f8a5c2;
+          }
         `}} />
 
         <div className="glass-card">
-          {/* අලුත් Vortex Title */}
           <h1 className="vortex-title">VORTEX</h1>
-          <p className="sub-title">YouTube to MP3 Downloader</p>
+          <p className="sub-title">PREMIUM MP3 DOWNLOADER</p>
 
           <input
             className="input-glass"
-            placeholder="Paste YouTube Link Here..."
+            placeholder="Paste YouTube Link..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
@@ -138,18 +204,16 @@ export default function Home() {
 
           {data?.status && (
             <div className="result-card">
-              {/* Thumbnail Frame එක */}
               <div className="thumb-frame">
-                <img className="thumb-img" src={data.data.thumb} alt="thumbnail" />
+                <img className="thumb-img" src={data.data.thumb} alt="thumb" />
               </div>
 
-              {/* අලුත් Video Title එක */}
               <p className="video-title">
-                <strong>Title:</strong> {data.data.title}
+                <span>Title:</span> {data.data.title}
               </p>
 
               <a className="download-link" href={data.data.download} target="_blank" rel="noreferrer">
-                ⬇ Download Audio
+                ⬇ DOWNLOAD AUDIO
               </a>
             </div>
           )}
