@@ -1,51 +1,52 @@
-// pages/api/tiktok.js
 import axios from 'axios';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Method not allowed');
+  if (req.method !== 'POST') return res.status(405).json({ success: false });
 
   const { url } = req.body;
-  if (!url) return res.json({ success: false, result: 'URL එක ඇතුළත් කරන්න' });
-
+  
   try {
-    // සටහන: cloudscraper වෙනුවට සාමාන්‍ය axios පාවිච්චි කර බලමු. 
-    // tikdownloader.io සමහර වෙලාවට Cloudflare protection දානවා.
     const response = await axios.post('https://tikdownloader.io/api/ajaxSearch', 
-      new URLSearchParams({ q: url }), 
+      `q=${encodeURIComponent(url)}`, 
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'X-Requested-With': 'XMLHttpRequest'
+          'Accept': '*/*',
+          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Origin': 'https://tikdownloader.io',
+          'Referer': 'https://tikdownloader.io/'
         }
       }
     );
 
-    const { status, data, msg } = response.data;
-    if (status !== 'ok') return res.json({ success: false, result: msg || 'Gagal ambil data' });
+    const data = response.data;
+    if (data.status !== 'ok') throw new Error(data.msg || 'Gagal');
 
-    // HTML decode logic (ඔයාගේ scraper එකේ තිබුණ එකමයි)
-    const html = data;
+    const html = data.data;
     const $ = s => (html.match(s) || [])[1]?.trim();
-    
-    // Download links ටික Extract කිරීම
-    const downloads = [...html.matchAll(/href="([^"]+)"[^>]*tik-button-dl[^>]*>([\s\S]*?)<\/a>/g)].map(m => ({ 
-      type: m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), 
+
+    // HTML Entities Decode කිරීම
+    const cleanHtml = html.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+
+    const downloads = [...cleanHtml.matchAll(/href="([^"]+)"[^>]*tik-button-dl[^>]*>([\s\S]*?)<\/a>/g)].map(m => ({ 
+      type: m[2].replace(/<[^>]+>/g, '').trim(), 
       url: m[1] 
     }));
 
-    if (!downloads.length) return res.json({ success: false, result: 'Download links හමු වුනේ නැත' });
+    // TikTok Thumbnail proxy හරහා යැවීම (Referer block එක මඟහැරීමට)
+    const rawThumb = $(/src="([^"]+)"/);
 
     res.json({
       success: true,
       result: {
-        title: $(/<h3[^>]*>([^<]+)<\/h3>/) || 'TikTok Video',
-        thumbnail: $(/<img[^>]+src="([^"]+)"[^>]*class="[^"]*image-tik[^"]*"/),
-        downloads
+        title: $(/<h3>([^<]+)<\/h3>/) || 'TikTok Video',
+        thumbnail: rawThumb,
+        downloads: downloads
       }
     });
 
   } catch (e) {
-    res.json({ success: false, result: e.message });
+    res.status(200).json({ success: false, result: e.message });
   }
 }
