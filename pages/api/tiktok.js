@@ -7,7 +7,6 @@ export default async function handler(req, res) {
   if (!url) return res.json({ success: false, result: 'URL is required' });
 
   try {
-    // TikWM API එක පාවිච්චි කිරීම (මෙහි blocks ඉතා අඩුයි)
     const response = await axios.post('https://www.tikwm.com/api/', 
       new URLSearchParams({ url: url }).toString(), 
       {
@@ -20,21 +19,26 @@ export default async function handler(req, res) {
 
     const { code, data, msg } = response.data;
 
-    if (code !== 0) {
+    if (code !== 0 || !data) {
       return res.json({ success: false, result: msg || 'Failed to fetch TikTok data' });
     }
 
-    // අපේ UI එකට ගැලපෙන විදිහට Data සකස් කිරීම
+    // ලින්ක් එකේ https කෑල්ල දෙපාරක් එන එක වැළැක්වීමට මෙහෙම කරමු:
+    const formatUrl = (path) => {
+      if (!path) return "#";
+      // සමහර වෙලාවට TikWM කෙලින්ම full URL එකක් දෙනවා, සමහරවිට path එකක් විතරක් දෙනවා
+      return path.startsWith('http') ? path : `https://www.tikwm.com${path}`;
+    };
+
     const downloads = [
-      { type: 'Video (No Watermark)', url: `https://www.tikwm.com${data.play}` },
-      { type: 'Video (Watermark)', url: `https://www.tikwm.com${data.wmplay}` },
-      { type: 'Music (MP3)', url: `https://www.tikwm.com${data.music}` }
+      { type: 'Video (No Watermark)', url: formatUrl(data.play) },
+      { type: 'Video (Watermark)', url: formatUrl(data.wmplay) },
+      { type: 'Music (MP3)', url: formatUrl(data.music) }
     ];
 
-    // පින්තූර (Slideshow) එකක් නම් ඒවායේ ලින්ක් එකතු කිරීම
     if (data.images && data.images.length > 0) {
       data.images.forEach((img, index) => {
-        downloads.push({ type: `Image ${index + 1}`, url: img });
+        downloads.push({ type: `Image ${index + 1}`, url: formatUrl(img) });
       });
     }
 
@@ -42,13 +46,12 @@ export default async function handler(req, res) {
       success: true,
       result: {
         title: data.title || 'TikTok Content',
-        thumbnail: `https://www.tikwm.com${data.cover}`,
+        thumbnail: formatUrl(data.cover),
         downloads: downloads
       }
     });
 
   } catch (e) {
-    console.error(e);
-    res.json({ success: false, result: "Network Error: Please try again later" });
+    res.json({ success: false, result: "Network Error: Link issue fixed, please retry" });
   }
 }
