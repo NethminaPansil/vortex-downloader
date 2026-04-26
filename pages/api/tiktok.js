@@ -7,41 +7,48 @@ export default async function handler(req, res) {
   if (!url) return res.json({ success: false, result: 'URL is required' });
 
   try {
-    const response = await axios.post('https://tikdownloader.io/api/ajaxSearch', 
-      new URLSearchParams({ q: url }).toString(), 
+    // TikWM API එක පාවිච්චි කිරීම (මෙහි blocks ඉතා අඩුයි)
+    const response = await axios.post('https://www.tikwm.com/api/', 
+      new URLSearchParams({ url: url }).toString(), 
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          'X-Requested-With': 'XMLHttpRequest',
-          'Referer': 'https://tikdownloader.io/'
         }
       }
     );
 
-    const { status, data, msg } = response.data;
-    if (status !== 'ok') return res.json({ success: false, result: msg || 'Failed to fetch TikTok data' });
+    const { code, data, msg } = response.data;
 
-    const html = data;
-    const $ = s => (html.match(s) || [])[1]?.trim();
-    
-    const downloads = [...html.matchAll(/href="([^"]+)"[^>]*tik-button-dl[^>]*>([\s\S]*?)<\/a>/g)].map(m => ({ 
-      type: m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), 
-      url: m[1] 
-    }));
+    if (code !== 0) {
+      return res.json({ success: false, result: msg || 'Failed to fetch TikTok data' });
+    }
 
-    if (!downloads.length) return res.json({ success: false, result: 'No download links found' });
+    // අපේ UI එකට ගැලපෙන විදිහට Data සකස් කිරීම
+    const downloads = [
+      { type: 'Video (No Watermark)', url: `https://www.tikwm.com${data.play}` },
+      { type: 'Video (Watermark)', url: `https://www.tikwm.com${data.wmplay}` },
+      { type: 'Music (MP3)', url: `https://www.tikwm.com${data.music}` }
+    ];
+
+    // පින්තූර (Slideshow) එකක් නම් ඒවායේ ලින්ක් එකතු කිරීම
+    if (data.images && data.images.length > 0) {
+      data.images.forEach((img, index) => {
+        downloads.push({ type: `Image ${index + 1}`, url: img });
+      });
+    }
 
     res.json({
       success: true,
       result: {
-        title: $(/<h3[^>]*>([^<]+)<\/h3>/) || 'TikTok Content',
-        thumbnail: $(/<img[^>]+src="([^"]+)"[^>]*class="[^"]*image-tik[^"]*"/),
-        downloads
+        title: data.title || 'TikTok Content',
+        thumbnail: `https://www.tikwm.com${data.cover}`,
+        downloads: downloads
       }
     });
 
   } catch (e) {
-    res.json({ success: false, result: "Request Blocked by Server" });
+    console.error(e);
+    res.json({ success: false, result: "Network Error: Please try again later" });
   }
 }
