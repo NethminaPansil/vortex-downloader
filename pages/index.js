@@ -5,69 +5,45 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [videoInfo, setVideoInfo] = useState(null);
-  const [downloadLink, setDownloadLink] = useState(null);
 
   const analyzeLink = async () => {
-    if (!url) return;
+    if (!url) {
+      alert("Error: Please paste a URL first.");
+      return;
+    }
+    
     setLoading(true);
     setVideoInfo(null);
-    setDownloadLink(null);
 
-    const isTikTok = url.includes("tiktok.com");
-    const apiEndpoint = isTikTok ? "/api/tiktok" : "/api/download";
+    // Endpoint එක තීරණය කිරීම
+    let apiEndpoint = "/api/download"; // Default for FB/YT
+    if (url.includes("tiktok.com")) {
+      apiEndpoint = "/api/tiktok";
+    }
 
     try {
       const res = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, type: "info" })
+        body: JSON.stringify({ url })
       });
+      
       const json = await res.json();
 
-      if (isTikTok) {
-        if (json.success) {
-          setVideoInfo({
-            title: json.result.title,
-            thumbnail: json.result.thumbnail, // TikTok thumbnail
-            isTikTok: true,
-            downloads: json.result.downloads
-          });
-        } else {
-          alert("TikTok error: " + json.result);
-        }
+      if (json.success || json.status) {
+        // TikTok සහ අනෙක් ඒවා අතර response එක සමාන කරගැනීම
+        const data = json.result || json.data;
+        
+        setVideoInfo({
+          title: data.title || "Social Media Video",
+          thumbnail: data.thumbnail || data.thumb || data.cover,
+          downloads: data.downloads || [] 
+        });
       } else {
-        if (json.status) {
-          setVideoInfo({
-            title: json.data.title,
-            thumbnail: json.data.thumbnail || json.data.thumb, // YouTube thumbnail fixed
-            isTikTok: false
-          });
-        } else {
-          alert("YouTube error!");
-        }
+        alert("Extraction Failed: " + (json.result || json.message || "Invalid Link"));
       }
     } catch (error) {
-      alert("Error: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const startDownload = async (format) => {
-    setLoading(true);
-    setDownloadLink(null);
-    try {
-      const res = await fetch("/api/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, format })
-      });
-      const json = await res.json();
-      if (json.status) {
-        setDownloadLink({ link: json.dl || json.data?.download, format: format });
-      }
-    } catch (error) {
-      alert("Download error!");
+      alert("System Error: Unable to connect to the server.");
     } finally {
       setLoading(false);
     }
@@ -84,33 +60,50 @@ export default function Home() {
         <style dangerouslySetInnerHTML={{ __html: `
           body { margin: 0; padding: 0; font-family: 'Poppins', sans-serif; background-color: #05010a; }
           
-          /* Background Image Fix - මම මෙතන කෙලින්ම URL එක දානවා */
           .main-wrapper {
             min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
             background-size: cover; background-position: center; background-repeat: no-repeat;
-            background-image: linear-gradient(rgba(5, 1, 10, 0.8), rgba(5, 1, 10, 0.8)), url('https://pmd-img2url.koyeb.app/v/37b283cde9b2b713cccf287a39212e37.jpg');
-          }
-
-          @media (max-width: 768px) {
-            .main-wrapper { background-image: linear-gradient(rgba(5, 1, 10, 0.8), rgba(5, 1, 10, 0.8)), url('https://pmd-img2url.koyeb.app/v/d298774c05692f31633940598b648509.jpg'); }
+            background-image: linear-gradient(rgba(5, 1, 10, 0.85), rgba(5, 1, 10, 0.85)), url('https://pmd-img2url.koyeb.app/v/37b283cde9b2b713cccf287a39212e37.jpg');
           }
 
           .glass-card {
-            background: rgba(20, 10, 30, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: rgba(20, 10, 30, 0.7); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
             border: 1px solid rgba(138, 43, 226, 0.3); padding: 30px; border-radius: 30px;
-            width: 100%; max-width: 400px; text-align: center; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
+            width: 100%; max-width: 420px; text-align: center; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9);
           }
           
-          .vortex-title { font-family: 'Orbitron', sans-serif; color: #bd93f9; font-size: 35px; letter-spacing: 3px; margin: 0; text-shadow: 0 0 15px rgba(189, 147, 249, 0.6); }
-          .input-glass { width: 100%; padding: 14px; margin: 20px 0; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(138, 43, 226, 0.4); border-radius: 12px; color: #fff; outline: none; box-sizing: border-box; }
-          .btn-neon { width: 100%; padding: 14px; background: linear-gradient(135deg, #6c5ce7, #a29bfe); border: none; border-radius: 12px; color: white; font-weight: 600; cursor: pointer; text-transform: uppercase; }
-          .thumb-frame { width: 100%; padding: 5px; background: rgba(0,0,0,0.4); border-radius: 15px; border: 1px solid #444; margin: 20px 0; overflow: hidden; }
-          .thumb-img { width: 100%; border-radius: 10px; display: block; }
-          .video-title-text { color: #fff; font-size: 13px; text-align: left; margin: 10px 0; line-height: 1.4; }
-          .q-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-          .q-btn { padding: 10px; background: rgba(138, 43, 226, 0.2); border: 1px solid #8a2be2; color: #fff; border-radius: 8px; font-size: 11px; cursor: pointer; text-decoration: none; }
-          .dl-container { margin-top: 15px; padding: 12px; background: rgba(0, 255, 100, 0.1); border: 1px dashed #00ff64; border-radius: 10px; }
-          .download-link { color: #00ff64; text-decoration: none; font-weight: bold; font-size: 13px; }
+          .vortex-title { font-family: 'Orbitron', sans-serif; color: #bd93f9; font-size: 38px; letter-spacing: 4px; margin-bottom: 25px; text-shadow: 0 0 20px rgba(189, 147, 249, 0.5); }
+          .input-glass { width: 100%; padding: 15px; margin-bottom: 15px; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(138, 43, 226, 0.4); border-radius: 12px; color: #fff; outline: none; box-sizing: border-box; transition: 0.3s; font-size: 14px; }
+          .input-glass:focus { border-color: #bd93f9; box-shadow: 0 0 15px rgba(189, 147, 249, 0.4); }
+          
+          .btn-neon { width: 100%; padding: 15px; background: linear-gradient(135deg, #6c5ce7, #a29bfe); border: none; border-radius: 12px; color: white; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+          .btn-neon:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(108, 92, 231, 0.6); }
+          .btn-neon:disabled { background: #333; color: #777; cursor: not-allowed; }
+
+          .result-container { animation: fadeIn 0.5s ease-in-out; }
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+          .thumb-frame { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 15px; border: 1px solid #444; margin: 20px 0; overflow: hidden; position: relative; }
+          .thumb-img { width: 100%; height: 100%; object-fit: cover; }
+          
+          .video-title-text { color: #eee; font-size: 14px; margin-bottom: 20px; line-height: 1.5; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+          
+          .q-grid { display: grid; grid-template-columns: 1fr; gap: 12px; max-height: 250px; overflow-y: auto; padding-right: 5px; }
+          /* Scrollbar Style */
+          .q-grid::-webkit-scrollbar { width: 5px; }
+          .q-grid::-webkit-scrollbar-thumb { background: #8a2be2; border-radius: 10px; }
+
+          .dl-btn { 
+            padding: 14px; background: rgba(138, 43, 226, 0.15); border: 1px solid rgba(138, 43, 226, 0.5); 
+            color: #fff; border-radius: 12px; font-size: 13px; font-weight: 600;
+            text-decoration: none; display: flex; justify-content: space-between; align-items: center;
+            transition: 0.2s;
+          }
+          .dl-btn:hover { background: rgba(138, 43, 226, 0.4); border-color: #bd93f9; }
+          .dl-btn span { background: #bd93f9; color: #000; padding: 2px 8px; border-radius: 5px; font-size: 10px; text-transform: uppercase; }
+          
+          .back-btn { margin-top: 25px; background: none; border: none; color: #ff4757; cursor: pointer; font-size: 14px; font-weight: 600; opacity: 0.8; }
+          .back-btn:hover { opacity: 1; text-decoration: underline; }
         `}} />
 
         <div className="glass-card">
@@ -118,38 +111,44 @@ export default function Home() {
           
           {!videoInfo ? (
             <>
-              <input className="input-glass" placeholder="Paste Link Here..." value={url} onChange={(e) => setUrl(e.target.value)} />
-              <button className="btn-neon" onClick={analyzeLink} disabled={loading}>{loading ? "Analyzing..." : "Analyze Link"}</button>
+              <input 
+                className="input-glass" 
+                placeholder="Paste TikTok, YT, or FB Link..." 
+                value={url} 
+                onChange={(e) => setUrl(e.target.value)} 
+              />
+              <button className="btn-neon" onClick={analyzeLink} disabled={loading}>
+                {loading ? "Analyzing Video..." : "Start Download"}
+              </button>
             </>
           ) : (
-            <div>
+            <div className="result-container">
               <div className="thumb-frame">
                 <img className="thumb-img" src={videoInfo.thumbnail} alt="Thumbnail" />
               </div>
-              <p className="video-title-text"><span style={{color:'#bd93f9'}}>Title:</span> {videoInfo.title}</p>
+              
+              <p className="video-title-text">
+                <span style={{color:'#bd93f9', fontWeight:'bold'}}>Title:</span> {videoInfo.title}
+              </p>
 
               <div className="q-grid">
-                {videoInfo.isTikTok ? (
+                {videoInfo.downloads.length > 0 ? (
                   videoInfo.downloads.map((dl, i) => (
-                    <a key={i} href={dl.url} target="_blank" rel="noreferrer" className="q-btn">{dl.type}</a>
+                    <a key={i} href={dl.url} target="_blank" rel="noreferrer" className="dl-btn">
+                      {dl.type} <span>Link {i+1}</span>
+                    </a>
                   ))
                 ) : (
-                  <>
-                    <button className="q-btn" onClick={() => startDownload('mp3')}>MP3 Audio</button>
-                    <button className="q-btn" onClick={() => startDownload('720')}>720P Video</button>
-                    <button className="q-btn" onClick={() => startDownload('360')}>360P Video</button>
-                    <button className="q-btn" onClick={() => startDownload('1080')}>1080P Video</button>
-                  </>
+                  <p style={{color:'#ff4757', fontSize:'12px'}}>No download links found.</p>
                 )}
               </div>
 
-              {downloadLink && (
-                <div className="dl-container">
-                  <a className="download-link" href={downloadLink.link} target="_blank" rel="noreferrer">⬇️ CLICK TO DOWNLOAD</a>
-                </div>
-              )}
-
-              <button onClick={() => {setVideoInfo(null); setUrl(""); setDownloadLink(null);}} style={{marginTop:'20px', background:'none', border:'none', color:'#ff4757', cursor:'pointer'}}>← Back</button>
+              <button 
+                className="back-btn" 
+                onClick={() => {setVideoInfo(null); setUrl("");}}
+              >
+                ← Back to Home
+              </button>
             </div>
           )}
         </div>
