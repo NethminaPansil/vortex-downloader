@@ -11,7 +11,7 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "cheerio": "latest",
+     "cheerio": "^1.0.0",
     "axios": "latest"
   }
 }
