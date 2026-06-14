@@ -9,6 +9,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [videoInfo, setVideoInfo] = useState(null);
   const [downloadLink, setDownloadLink] = useState(null);
+  const [ytError, setYtError] = useState("");
 
   // ── Instagram state ──
   const [igUrl, setIgUrl] = useState("");
@@ -28,7 +29,7 @@ export default function Home() {
   const switchTab = (tab) => {
     setActiveTab(tab);
     // Reset all states on tab switch
-    setUrl(""); setVideoInfo(null); setDownloadLink(null);
+    setUrl(""); setVideoInfo(null); setDownloadLink(null); setYtError("");
     setIgUrl(""); setIgResult(null); setIgError("");
     setTtUrl(""); setTtResult(null); setTtError("");
   };
@@ -39,6 +40,7 @@ export default function Home() {
     setLoading(true);
     setVideoInfo(null);
     setDownloadLink(null);
+    setYtError("");
     try {
       const res = await fetch("/api/download", {
         method: "POST",
@@ -49,7 +51,7 @@ export default function Home() {
       if (json.status) {
         setVideoInfo(json.data);
       } else {
-        alert("සබැඳිය පරීක්ෂා කරන්න!");
+        setYtError("සබැඳිය වැරදියි! නිවැරදි YouTube link එකක් paste කරන්න.");
       }
     } catch (error) {
       console.error(error);
@@ -335,6 +337,7 @@ export default function Home() {
                   <button className="btn-neon" onClick={analyzeLink} disabled={loading}>
                     {loading ? "Analyzing..." : "Analyze Link"}
                   </button>
+                  {ytError && <div className="error-box" style={{marginTop:"12px"}}>⚠️ {ytError}</div>}
                 </>
               ) : (
                 <div className="result-area">
@@ -403,14 +406,15 @@ export default function Home() {
                     </p>
                   )}
                   <div className="ig-media-links">
-                    {igResult.url.map((item, i) => (
-                      <a key={i} className="ig-dl-btn" href={item.url} target="_blank" rel="noopener noreferrer">
-                        {item.type === "video"
-                          ? `📹 Download Video${igResult.url.length > 1 ? ` ${i+1}` : ""}`
-                          : `🖼️ Download Image${igResult.url.length > 1 ? ` ${i+1}` : ""}`}
-                        {item.ext ? ` (.${item.ext})` : ""}
-                      </a>
-                    ))}
+                    {igResult.url.map((item, i) => {
+                      const isVideo = item.type === "video" || ["mp4","mov","webm"].includes(item.ext);
+                      const num = igResult.url.length > 1 ? ` ${i + 1}` : "";
+                      return (
+                        <a key={i} className="ig-dl-btn" href={item.url} target="_blank" rel="noopener noreferrer">
+                          {isVideo ? `📹 Download Video${num}` : `🖼️ Download Image${num}`}
+                        </a>
+                      );
+                    })}
                   </div>
                   <button className="back-btn" onClick={() => { setIgResult(null); setIgError(""); setIgUrl(""); }}>
                     ← Try Another Link
