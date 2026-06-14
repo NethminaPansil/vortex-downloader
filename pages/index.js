@@ -141,7 +141,7 @@ export default function Home() {
             padding: 20px; box-sizing: border-box; background-size: cover;
             background-position: center; background-repeat: no-repeat; background-attachment: fixed;
             background-image: linear-gradient(rgba(5,1,10,0.75), rgba(5,1,10,0.75)),
-              url('https://pmd-img2url.koyeb.app/v/37b283cde9b2b713cccf287a39212e37.jpg');
+              url('https://www.image2url.com/r2/default/images/1781415444872-1b4ac2ac-fea0-462e-a131-242f7173ec95.jpg');
           }
           @media (max-width: 768px) {
             .main-wrapper {
