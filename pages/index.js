@@ -51,7 +51,7 @@ export default function Home() {
       if (json.status) {
         setVideoInfo(json.data);
       } else {
-        setYtError("සබැඳිය වැරදියි! නිවැරදි YouTube link එකක් paste කරන්න.");
+        setYtError("Error! Give me a Valid YT URL.");
       }
     } catch (error) {
       console.error(error);
