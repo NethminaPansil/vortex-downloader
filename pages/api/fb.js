@@ -9,70 +9,79 @@ export default async function handler(req, res) {
     });
   }
 
-  const { url } = req.body;
+  const { url } = req.body || {};
 
   // Check if URL is provided
-  if (!url) {
+  if (!url || !url.trim()) {
     return res.status(400).json({ 
       success: false, 
-      result: 'URL is required. Please provide a valid TikTok link.' 
+      result: 'URL is required. Please provide a valid Facebook link.' 
+    });
+  }
+
+  // Basic Facebook URL validation
+  const fbPattern = /https?:\/\/(www\.|m\.|web\.)?(facebook\.com|fb\.watch)\/.+/i;
+  if (!fbPattern.test(url.trim())) {
+    return res.status(400).json({ 
+      success: false, 
+      result: 'Invalid Facebook URL. Please provide a valid video link.' 
     });
   }
 
   try {
-    const response = await axios.post('https://www.tikwm.com/api/', 
-      new URLSearchParams({ url: url }).toString(), 
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        }
+    const apiUrl = `https://apis.davidcyriltech.my.id/facebook?url=${encodeURIComponent(url.trim())}`;
+
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
       }
-    );
+    });
 
-    const { code, data, msg } = response.data;
+    const { success, result } = response.data || {};
 
-    // Handle cases where TikWM returns an error (code 0 is success)
-    if (code !== 0 || !data) {
-      return res.json({ 
+    if (!success || !result) {
+      return res.status(400).json({ 
         success: false, 
-        result: msg || 'Invalid video link or video is private.' 
+        result: 'Invalid video link or video is private.' 
       });
     }
 
-    const formatUrl = (path) => {
-      if (!path) return "#";
-      return path.startsWith('http') ? path : `https://www.tikwm.com${path}`;
-    };
+    const downloads = [];
 
-    const downloads = [
-      { type: 'Video (No Watermark)', url: formatUrl(data.play) },
-      { type: 'Video (Watermark)', url: formatUrl(data.wmplay) },
-      { type: 'Music (MP3)', url: formatUrl(data.music) }
-    ];
+    // Extract HD & SD links from API response
+    if (result.downloads?.hd?.url) {
+      downloads.push({ 
+        type: 'Video (HD)', 
+        url: result.downloads.hd.url 
+      });
+    }
 
-    // Handle image slides if available
-    if (data.images && data.images.length > 0) {
-      data.images.forEach((img, index) => {
-        downloads.push({ type: `Slide Image ${index + 1}`, url: formatUrl(img) });
+    if (result.downloads?.sd?.url) {
+      downloads.push({ 
+        type: 'Video (SD)', 
+        url: result.downloads.sd.url 
+      });
+    }
+
+    if (downloads.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        result: 'Could not find media download URLs.' 
       });
     }
 
     // Success Response
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       result: {
-        title: data.title || 'Untitled Video',
-        thumbnail: formatUrl(data.cover),
-        author: data.author?.unique_id || 'Unknown',
+        title: result.title ? result.title.replace(/\r\n/g, ' ').trim() : 'Facebook Video',
         downloads: downloads
       }
     });
 
   } catch (e) {
-    // Catch network or unexpected errors
     console.error('API Error:', e.message);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       success: false, 
       result: 'Internal Server Error. Please try again later.' 
     });
