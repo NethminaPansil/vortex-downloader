@@ -1,94 +1,67 @@
-const axios = require("axios");
-const crypto = require("crypto");
-
-class SaveTube {
-  constructor() {
-    this.ky = 'C5D58EF67A7584E4A29F6C35BBC4EB12';
-    this.m = /(?:youtu\.be\/|youtube\.com.*v=)([a-zA-Z0-9_-]{11})/;
-
-    this.is = axios.create({
-      headers: {
-        "content-type": "application/json",
-        "origin": "https://yt.savetube.me",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
-      }
-    });
-  }
-
-  async decrypt(enc) {
-    try {
-      const sr = Buffer.from(enc, "base64");
-      const ky = Buffer.from(this.ky, "hex");
-      const iv = sr.slice(0, 16);
-      const dt = sr.slice(16);
-
-      const dc = crypto.createDecipheriv("aes-128-cbc", ky, iv);
-      return JSON.parse(Buffer.concat([dc.update(dt), dc.final()]).toString());
-    } catch (e) {
-      throw new Error("Decryption failed");
-    }
-  }
-
-  async getCdn() {
-    const res = await this.is.get("https://media.savetube.vip/api/random-cdn");
-    return res.data.cdn;
-  }
-}
+import axios from "axios";
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ status: false, msg: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ status: false, msg: "Method not allowed" });
+  }
 
   try {
-    const { url, format, type } = req.body;
-    const st = new SaveTube();
-    const id = url.match(st.m)?.[1];
+    const { url, format, type } = req.body || {};
 
-    if (!id) throw new Error("Invalid YouTube URL");
+    if (!url) {
+      return res.status(400).json({ status: false, error: "URL is required" });
+    }
 
-    const cdn = await st.getCdn();
+    // YouTube URL එක නිවැරදිදැයි පරීක්ෂා කිරීම
+    const youtubeRegex = /(?:youtu\.be\/|youtube\.com.*v=)([a-zA-Z0-9_-]{11})/;
+    const videoId = url.match(youtubeRegex)?.[1];
 
-    // පියවර 1: වීඩියෝ විස්තර ලබා ගැනීම (Analyze Link එබූ විට)
-    const infoRes = await st.is.post(`https://${cdn}/v2/info`, {
-      url: `https://www.youtube.com/watch?v=${id}`
-    });
+    if (!videoId) {
+      return res.status(400).json({ status: false, error: "Invalid YouTube URL" });
+    }
 
-    const dec = await st.decrypt(infoRes.data.data);
+    // format එක mp3 නම් 'aud' (Audio), නැත්නම් 'vid' (Video) ලෙස සකසයි
+    const isAudio = format === "mp3";
+    const apiType = isAudio ? "aud" : "vid";
 
-    // Frontend එකෙන් ඉල්ලන්නේ තොරතුරු විතරක් නම් (Analyze mode)
+    // නව API එකට Request එක යැවීම
+    const response = await axios.get(
+      `https://ytdl.udmodzz.workers.dev/?url=${encodeURIComponent(url)}&type=${apiType}`
+    );
+    const data = response.data;
+
+    if (!data || !data.links) {
+      throw new Error("Failed to fetch download link from API");
+    }
+
+    // පියවර 1: Frontend එකෙන් ඉල්ලන්නේ තොරතුරු විතරක් නම් (Analyze mode)
     if (type === "info") {
       return res.json({
         status: true,
         data: {
-          title: dec.title,
-          thumbnail: dec.thumbnail || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-          duration: dec.duration
+          title: data.videoname,
+          thumbnail: data.thumbnail || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+          description: data.desc
         }
       });
     }
 
-    // පියවර 2: Download Link එක ලබා ගැනීම (Quality Button එකක් එබූ විට)
-    // format එක mp3 නම් 'audio', නැත්නම් 'video' ලෙස සකසයි
-    const isAudio = format === 'mp3';
-    
-    const dlRes = await st.is.post(`https://${cdn}/download`, {
-      id: id,
-      downloadType: isAudio ? 'audio' : 'video',
-      quality: isAudio ? '128' : format,
-      key: dec.key
-    });
+    // පියවර 2: Download Link එක ලබා ගැනීම (Quality / Download button එකක් එබූ විට)
+    // links Object එකේ ඇති පළමු Link එක ලබා ගනී (e.g., "HD Video" හෝ "128kbps")
+    const downloadUrl = Object.values(data.links)[0];
 
-    if (dlRes.data && dlRes.data.data) {
-      res.json({ 
-        status: true, 
-        dl: dlRes.data.data.downloadUrl,
-        format: format 
+    if (downloadUrl) {
+      return res.json({
+        status: true,
+        dl: downloadUrl,
+        format: format || (isAudio ? "mp3" : "mp4")
       });
     } else {
       throw new Error("Download link generation failed");
     }
 
   } catch (e) {
-    console.error(e);
-    res.json({ status: false, error: e.message });
+    console.error("API Error:", e.message);
+    return res.status(500).json({ status: false, error: e.message });
   }
 }
