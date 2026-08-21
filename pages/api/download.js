@@ -1,3 +1,19 @@
+const axios = require("axios");
+
+const BASE = "https://ytdl.udmodzz.workers.dev/";
+const YT_REGEX = /(?:youtu\.be\/|youtube\.com.*v=)([a-zA-Z0-9_-]{11})/;
+
+async function fetchYtInfo(url, type) {
+  const res = await axios.get(BASE, {
+    params: { url, type },
+    headers: {
+      "user-agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+    },
+  });
+  return res.data;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST")
     return res.status(405).json({ status: false, msg: "Method not allowed" });
@@ -8,9 +24,12 @@ export default async function handler(req, res) {
 
     if (!id) throw new Error("Invalid YouTube URL");
 
+    // පියවර 1: වීඩියෝ විස්තර ලබා ගැනීම (Analyze Link එබූ විට)
     if (type === "info") {
       const data = await fetchYtInfo(url, "vid");
+
       if (!data?.links) throw new Error("Video info not found");
+
       return res.json({
         status: true,
         data: {
@@ -20,22 +39,33 @@ export default async function handler(req, res) {
       });
     }
 
+    // පියවර 2: Download Link එක ලබා ගැනීම (Quality Button එකක් එබූ විට)
     const isAudio = format === "mp3";
     const data = await fetchYtInfo(url, isAudio ? "aud" : "vid");
+
     if (!data?.links) throw new Error("Download link generation failed");
 
+    // API එකෙන් ලැබෙන links object එකේ පළමු key එකේ අගය ගන්නවා
+    // (mp3 → "128kbps", video → "HD Video")
     const firstKey = Object.keys(data.links)[0];
-    const rawLink = data.links[firstKey];
+    const downloadUrl = data.links[firstKey];
 
-    // rawLink එකේ ඇතුළෙ තියෙන real CDN url එක extract කරගන්නවා
-    const inner = new URL(rawLink);
-    const actualUrl = inner.searchParams.get("url");
+    if (!downloadUrl) throw new Error("Download link generation failed");
 
-    if (!actualUrl) throw new Error("Download link generation failed");
+    // සෘජුවම CDN link එක browser එකට දුන්නොත් Referer/hotlink check එකේදී
+    // 400 error එකක් එනවා. ඒ නිසා අපේම proxy endpoint එකක් හරහා serve කරනවා.
+    const ext = isAudio ? "mp3" : "mp4";
+    const safeTitle = (data.videoname || "vortex-download")
+      .replace(/[\\/:*?"<>|]/g, "")
+      .slice(0, 60);
+
+    const proxyUrl = `/api/ytproxy?url=${encodeURIComponent(
+      downloadUrl
+    )}&ext=${ext}&title=${encodeURIComponent(safeTitle)}`;
 
     res.json({
       status: true,
-      dl: actualUrl,
+      dl: proxyUrl,
       format: format,
     });
   } catch (e) {
