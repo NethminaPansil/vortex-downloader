@@ -160,6 +160,13 @@ export default function Home() {
           href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@300;400;600&display=swap"
           rel="stylesheet"
         />
+
+       <script async="async" data-cfasync="false" src="https://pl30978676.profitableratecpmnetwork.com/8597b5413e360222daa796cb77c740c9/invoke.js"></script>
+<div id="container-8597b5413e360222daa796cb77c740c9"></div>
+
+        <script src="https://pl30978675.profitableratecpmnetwork.com/d2/db/0a/d2db0a28bfeabc73ceddbb3d296fc34a.js"></script>
+
+            
       </Head>
 
       <div className="main-wrapper">
