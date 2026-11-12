@@ -1,89 +1,79 @@
-import axios from 'axios';
+import axios from "axios";
+
+const API_BASE = "https://vortex-api-theta.vercel.app/download/fbdl";
+const FB_REGEX =
+  /https?:\/\/(www\.|m\.|web\.)?(facebook\.com|fb\.watch|fb\.com)\/[^\s]+/i;
 
 export default async function handler(req, res) {
-  // Check if the method is POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
-      result: 'Method Not Allowed. Please use POST.' 
-    });
+  if (req.method !== "POST") {
+    return res.status(405).json({ status: false, error: "Method not allowed" });
   }
 
   const { url } = req.body || {};
 
-  // Check if URL is provided
-  if (!url || !url.trim()) {
-    return res.status(400).json({ 
-      success: false, 
-      result: 'URL is required. Please provide a valid Facebook link.' 
-    });
+  if (!url || typeof url !== "string" || !url.trim()) {
+    return res.status(400).json({ status: false, error: "Facebook URL is required." });
   }
 
-  // Basic Facebook URL validation
-  const fbPattern = /https?:\/\/(www\.|m\.|web\.)?(facebook\.com|fb\.watch)\/.+/i;
-  if (!fbPattern.test(url.trim())) {
-    return res.status(400).json({ 
-      success: false, 
-      result: 'Invalid Facebook URL. Please provide a valid video link.' 
+  if (!FB_REGEX.test(url.trim())) {
+    return res.status(400).json({
+      status: false,
+      error: "Invalid Facebook URL. Please provide a valid video, reel, or watch link.",
     });
   }
 
   try {
-    const apiUrl = `https://apis.davidcyriltech.my.id/facebook?url=${encodeURIComponent(url.trim())}`;
-
-    const response = await axios.get(apiUrl, {
+    const { data } = await axios.get(API_BASE, {
+      params: { url: url.trim() },
+      timeout: 15000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-      }
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
     });
 
-    const { success, result } = response.data || {};
-
-    if (!success || !result) {
-      return res.status(400).json({ 
-        success: false, 
-        result: 'Invalid video link or video is private.' 
+    const r = data?.result;
+    if (!data?.status || !r || (!r.dl_link && !r.links?.length)) {
+      return res.status(404).json({
+        status: false,
+        error: "Could not retrieve Facebook video. Make sure the post is public.",
       });
     }
 
-    const downloads = [];
+    // Thumbnail URL එකේ ඇති &amp; entities නිවැරදි කිරීම
+    const cleanThumbnail = r.thumbnail
+      ? r.thumbnail.replace(/&amp;/g, "&")
+      : null;
 
-    // Extract HD & SD links from API response
-    if (result.downloads?.hd?.url) {
-      downloads.push({ 
-        type: 'Video (HD)', 
-        url: result.downloads.hd.url 
-      });
-    }
+    // Quality options සකසා ගැනීම (HD / SD)
+    const options = Array.isArray(r.links) && r.links.length > 0
+      ? r.links.map((item) => ({
+          label: item.quality || "Download Video",
+          format: "mp4",
+          dl: item.url,
+        }))
+      : [
+          ...(r.hd ? [{ label: "720p (HD)", format: "mp4", dl: r.hd }] : []),
+          ...(r.sd ? [{ label: "360p (SD)", format: "mp4", dl: r.sd }] : []),
+          ...(r.dl_link && !r.hd && !r.sd
+            ? [{ label: r.quality || "Download Video", format: "mp4", dl: r.dl_link }]
+            : []),
+        ];
 
-    if (result.downloads?.sd?.url) {
-      downloads.push({ 
-        type: 'Video (SD)', 
-        url: result.downloads.sd.url 
-      });
-    }
-
-    if (downloads.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        result: 'Could not find media download URLs.' 
-      });
-    }
-
-    // Success Response
     return res.status(200).json({
-      success: true,
+      status: true,
       result: {
-        title: result.title ? result.title.replace(/\r\n/g, ' ').trim() : 'Facebook Video',
-        downloads: downloads
-      }
+        title: r.title || "Facebook Video",
+        duration: r.duration || null,
+        thumbnail: cleanThumbnail,
+        options,
+      },
     });
-
-  } catch (e) {
-    console.error('API Error:', e.message);
-    return res.status(500).json({ 
-      success: false, 
-      result: 'Internal Server Error. Please try again later.' 
+  } catch (error) {
+    console.error("Facebook Downloader Error:", error.message);
+    return res.status(500).json({
+      status: false,
+      error: error.response?.data?.message || error.message || "Internal server error",
     });
   }
 }
