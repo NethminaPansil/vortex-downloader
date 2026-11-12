@@ -8,6 +8,7 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [videoInfo, setVideoInfo] = useState(null);
+  const [selectedQuality, setSelectedQuality] = useState("720");
   const [downloadLink, setDownloadLink] = useState(null);
   const [ytError, setYtError] = useState("");
 
@@ -23,7 +24,7 @@ export default function Home() {
   const [ttResult, setTtResult] = useState(null);
   const [ttError, setTtError] = useState("");
 
-  // ── Facebook state (Added) ──
+  // ── Facebook state ──
   const [fbUrl, setFbUrl] = useState("");
   const [fbLoading, setFbLoading] = useState(false);
   const [fbResult, setFbResult] = useState(null);
@@ -34,8 +35,7 @@ export default function Home() {
 
   const switchTab = (tab) => {
     setActiveTab(tab);
-    // Reset all states on tab switch
-    setUrl(""); setVideoInfo(null); setDownloadLink(null); setYtError("");
+    setUrl(""); setVideoInfo(null); setDownloadLink(null); setYtError(""); setSelectedQuality("720");
     setIgUrl(""); setIgResult(null); setIgError("");
     setTtUrl(""); setTtResult(null); setTtError("");
     setFbUrl(""); setFbResult(null); setFbError("");
@@ -43,7 +43,7 @@ export default function Home() {
 
   // ── YouTube handlers ──
   const analyzeLink = async () => {
-    if (!url) return;
+    if (!url.trim()) return;
     setLoading(true);
     setVideoInfo(null);
     setDownloadLink(null);
@@ -52,13 +52,13 @@ export default function Home() {
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, type: "info" })
+        body: JSON.stringify({ url: url.trim(), type: "info" }),
       });
       const json = await res.json();
       if (json.status) {
         setVideoInfo(json.data);
       } else {
-        setYtError("Error! Give me a Valid YT URL.");
+        setYtError(json.error || "Error! Give me a Valid YT URL.");
       }
     } catch (error) {
       console.error(error);
@@ -68,19 +68,29 @@ export default function Home() {
     }
   };
 
-  const startDownload = async (format) => {
+  const startDownload = async (format, quality = selectedQuality) => {
     setLoading(true);
     setDownloadLink(null);
+    setYtError("");
     try {
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, format })
+        body: JSON.stringify({ url: url.trim(), format, quality }),
       });
       const json = await res.json();
-      if (json.status) setDownloadLink({ link: json.dl, format });
+      if (json.status) {
+        setDownloadLink({
+          link: json.dl,
+          format: json.format,
+          quality: json.quality || (format === "mp3" ? "128kbps" : `${quality}p`),
+        });
+      } else {
+        setYtError(json.error || "Failed to generate download link.");
+      }
     } catch (error) {
       console.error(error);
+      setYtError("Failed to generate download link.");
     } finally {
       setLoading(false);
     }
@@ -96,10 +106,10 @@ export default function Home() {
       const res = await fetch("/api/instagram", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: igUrl.trim() })
+        body: JSON.stringify({ url: igUrl.trim() }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || "Something went wrong");
+      if (!res.ok || !data.status) throw new Error(data.error || "Something went wrong");
       setIgResult(data.result);
     } catch (err) {
       setIgError(err.message);
@@ -118,11 +128,11 @@ export default function Home() {
       const res = await fetch("/api/tiktok", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: ttUrl.trim() })
+        body: JSON.stringify({ url: ttUrl.trim() }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || "Something went wrong");
-      setTtResult(data);
+      if (!res.ok || !data.status) throw new Error(data.error || "Something went wrong");
+      setTtResult(data.result);
     } catch (err) {
       setTtError(err.message);
     } finally {
@@ -130,7 +140,7 @@ export default function Home() {
     }
   };
 
-  // ── Facebook handler (Added) ──
+  // ── Facebook handler ──
   const handleFacebook = async () => {
     if (!fbUrl.trim()) return;
     setFbLoading(true);
@@ -140,10 +150,10 @@ export default function Home() {
       const res = await fetch("/api/facebook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: fbUrl.trim() })
+        body: JSON.stringify({ url: fbUrl.trim() }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.result || "Something went wrong");
+      if (!res.ok || !data.status) throw new Error(data.error || "Something went wrong");
       setFbResult(data.result);
     } catch (err) {
       setFbError(err.message);
@@ -160,14 +170,15 @@ export default function Home() {
           href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Poppins:wght@300;400;600&display=swap"
           rel="stylesheet"
         />
-
-       <script async="async" data-cfasync="false" src="https://pl30978676.profitableratecpmnetwork.com/8597b5413e360222daa796cb77c740c9/invoke.js"></script>
-<div id="container-8597b5413e360222daa796cb77c740c9"></div>
-
+        <script
+          async="async"
+          data-cfasync="false"
+          src="https://pl30978676.profitableratecpmnetwork.com/8597b5413e360222daa796cb77c740c9/invoke.js"
+        ></script>
         <script src="https://pl30978675.profitableratecpmnetwork.com/d2/db/0a/d2db0a28bfeabc73ceddbb3d296fc34a.js"></script>
-
-            
       </Head>
+
+      <div id="container-8597b5413e360222daa796cb77c740c9"></div>
 
       <div className="main-wrapper">
         <style dangerouslySetInnerHTML={{ __html: `
@@ -215,7 +226,7 @@ export default function Home() {
           .tab-btn.active-tt { background: linear-gradient(135deg, #010101, #69C9D0, #EE1D52); color: #fff; box-shadow: 0 4px 12px rgba(238,29,82,0.4); }
           .tab-btn.active-fb { background: linear-gradient(135deg, #1877F2, #3b5998); color: #fff; box-shadow: 0 4px 12px rgba(24,119,242,0.4); }
 
-          /* ── Inputs ── */
+          /* ── Inputs & Select ── */
           .input-glass {
             width: 100%; padding: 15px; margin-bottom: 15px;
             background: rgba(0,0,0,0.5); border: 1px solid rgba(138,43,226,0.4);
@@ -224,6 +235,21 @@ export default function Home() {
           .input-glass.ig-input { border-color: rgba(225,48,108,0.4); }
           .input-glass.tt-input { border-color: rgba(238,29,82,0.4); }
           .input-glass.fb-input { border-color: rgba(24,119,242,0.4); }
+
+          /* ── Quality Selector Pills ── */
+          .quality-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;
+          }
+          .q-pill {
+            padding: 9px 4px; border-radius: 10px; font-size: 12px; font-weight: 600;
+            background: rgba(0,0,0,0.45); border: 1px solid rgba(162,155,254,0.3);
+            color: #a29bfe; cursor: pointer; transition: 0.2s;
+          }
+          .q-pill.active {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: #fff; border-color: transparent;
+            box-shadow: 0 4px 12px rgba(108,92,231,0.4);
+          }
 
           /* ── Buttons ── */
           .btn-neon {
@@ -246,27 +272,27 @@ export default function Home() {
           .thumb-img { width: 100%; border-radius: 14px; display: block; max-height: 250px; object-fit: cover; }
           .video-title-text { color: #eee; font-size: 13px; margin-bottom: 15px; text-align: left; }
           .video-title-text span { color: #bd93f9; font-weight: 600; }
-          
-          /* ── YouTube Specific ── */
-          .q-label { color: #a29bfe; font-size: 12px; font-weight: bold; text-align: left; margin: 10px 0 5px 2px; }
-          .dl-container { margin-top: 20px; padding: 15px; background: rgba(46,213,115,0.1); border: 1px dashed #2ed573; border-radius: 12px; }
-          .download-link { color: #2ed573; text-decoration: none; font-weight: 600; font-size: 14px; }
 
-          /* ── Download Buttons (IG, TT, FB) ── */
+          /* ── YouTube Specific ── */
+          .q-label { color: #a29bfe; font-size: 12px; font-weight: 600; text-align: left; margin: 10px 0 8px 2px; }
+          .dl-container { margin-top: 20px; padding: 15px; background: rgba(46,213,115,0.1); border: 1px dashed #2ed573; border-radius: 12px; }
+          .download-link { color: #2ed573; text-decoration: none; font-weight: 600; font-size: 14px; display: block; }
+
+          /* ── Download Buttons (YT, IG, TT, FB) ── */
           .media-links { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
           .dl-btn {
             display: block; width: 100%; padding: 13px; border-radius: 12px; color: #fff;
-            text-decoration: none; font-size: 13px; font-weight: 600; transition: 0.25s; box-sizing: border-box; text-align: center;
+            text-decoration: none; font-size: 13px; font-weight: 600; transition: 0.25s; box-sizing: border-box; text-align: center; cursor: pointer;
           }
           .yt-dl-btn { background: rgba(108,92,231,0.15); border: 1px solid rgba(162,155,254,0.5); }
           .yt-dl-btn:hover { background: linear-gradient(135deg, #6c5ce7, #a29bfe); box-shadow: 0 6px 16px rgba(108,92,231,0.35); }
 
           .ig-dl-btn { background: linear-gradient(135deg, rgba(193,53,132,0.2), rgba(225,48,108,0.2)); border: 1px solid rgba(225,48,108,0.5); }
           .ig-dl-btn:hover { background: linear-gradient(135deg, #c13584, #e1306c); box-shadow: 0 6px 16px rgba(225,48,108,0.35); }
-          
+
           .tt-dl-btn { background: rgba(238,29,82,0.12); border: 1px solid rgba(105,201,208,0.4); }
           .tt-dl-btn:hover { background: linear-gradient(135deg, #010101, #69C9D0, #EE1D52); box-shadow: 0 6px 16px rgba(238,29,82,0.3); }
-          
+
           .fb-dl-btn { background: rgba(24,119,242,0.15); border: 1px solid rgba(24,119,242,0.5); }
           .fb-dl-btn:hover { background: linear-gradient(135deg, #1877F2, #3b5998); box-shadow: 0 6px 16px rgba(24,119,242,0.35); }
 
@@ -326,33 +352,55 @@ export default function Home() {
                   </div>
                   <p className="video-title-text"><span>Title:</span> {videoInfo.title}</p>
 
-                  <div className="media-links">
-                    <a
-                      className="dl-btn yt-dl-btn"
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); startDownload("hd"); }}
-                    >
-                      🎬 Download Video (HD)
-                    </a>
-                    <a
-                      className="dl-btn yt-dl-btn"
-                      href="#"
-                      onClick={(e) => { e.preventDefault(); startDownload("mp3"); }}
-                    >
-                      🎧 Download MP3 (Audio)
-                    </a>
+                  {/* Quality Selector */}
+                  <p className="q-label">Select Video Quality:</p>
+                  <div className="quality-grid">
+                    {["1080", "720", "480", "360"].map((q) => (
+                      <button
+                        key={q}
+                        type="button"
+                        className={`q-pill ${selectedQuality === q ? "active" : ""}`}
+                        onClick={() => setSelectedQuality(q)}
+                      >
+                        {q}p
+                      </button>
+                    ))}
                   </div>
 
-                  {loading && <p style={{color:"#a29bfe",fontSize:"12px"}}>Generating link...</p>}
+                  <div className="media-links">
+                    <button
+                      type="button"
+                      className="dl-btn yt-dl-btn"
+                      disabled={loading}
+                      onClick={() => startDownload("mp4", selectedQuality)}
+                    >
+                      🎬 Generate MP4 ({selectedQuality}p)
+                    </button>
+                    <button
+                      type="button"
+                      className="dl-btn yt-dl-btn"
+                      disabled={loading}
+                      onClick={() => startDownload("mp3")}
+                    >
+                      🎧 Generate MP3 (128kbps Audio)
+                    </button>
+                  </div>
+
+                  {loading && <p style={{ color: "#a29bfe", fontSize: "12px", marginTop: "12px" }}>Generating download link...</p>}
+                  {ytError && <div className="error-box">⚠️ {ytError}</div>}
 
                   {downloadLink && (
                     <div className="dl-container">
-                      <a className="download-link" href={downloadLink.link} target="_blank" rel="noreferrer">
-                        ⬇️ DOWNLOAD {downloadLink.format.toUpperCase()} NOW
+                      <a className="download-link" href={downloadLink.link}>
+                        ⬇️ DOWNLOAD {downloadLink.format.toUpperCase()} ({downloadLink.quality}) NOW
                       </a>
                     </div>
                   )}
-                  <button className="back-btn" onClick={() => { setVideoInfo(null); setDownloadLink(null); setUrl(""); }}>
+
+                  <button
+                    className="back-btn"
+                    onClick={() => { setVideoInfo(null); setDownloadLink(null); setUrl(""); setYtError(""); }}
+                  >
                     ← Back to Home
                   </button>
                 </div>
@@ -384,19 +432,35 @@ export default function Home() {
                       <img className="thumb-img" src={igResult.thumbnail} alt="ig-thumb" />
                     </div>
                   )}
-                  {igResult.title && (
-                    <p className="video-title-text">
-                      <span>Caption:</span>{" "}
-                      {igResult.title.length > 80 ? igResult.title.slice(0, 80) + "…" : igResult.title}
-                    </p>
-                  )}
+
                   <div className="media-links">
-                    {igResult.video && (
-                      <a className="dl-btn ig-dl-btn" href={igResult.video} target="_blank" rel="noopener noreferrer">
-                        📹 Download Video
-                      </a>
+                    {Array.isArray(igResult.media) && igResult.media.length > 0 ? (
+                      igResult.media.map((item, idx) => (
+                        <a
+                          key={idx}
+                          className="dl-btn ig-dl-btn"
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {item.type === "image" ? "🖼️ Download Photo" : "📹 Download Video"}{" "}
+                          {igResult.media.length > 1 ? `#${idx + 1}` : ""}
+                        </a>
+                      ))
+                    ) : (
+                      igResult.dl_link && (
+                        <a
+                          className="dl-btn ig-dl-btn"
+                          href={igResult.dl_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          📹 Download Instagram Media
+                        </a>
+                      )
                     )}
                   </div>
+
                   <button className="back-btn" onClick={() => { setIgResult(null); setIgError(""); setIgUrl(""); }}>
                     ← Try Another Link
                   </button>
@@ -429,6 +493,12 @@ export default function Home() {
                       <img className="thumb-img" src={ttResult.thumbnail} alt="tt-thumb" />
                     </div>
                   )}
+                  {ttResult.author?.nickname && (
+                    <p className="video-title-text" style={{ marginBottom: "6px" }}>
+                      <span>Creator:</span> {ttResult.author.nickname}{" "}
+                      {ttResult.duration ? `(${ttResult.duration})` : ""}
+                    </p>
+                  )}
                   {ttResult.title && (
                     <p className="video-title-text" style={{ fontSize: "12px", opacity: 0.9 }}>
                       {ttResult.title.length > 100 ? ttResult.title.slice(0, 100) + "…" : ttResult.title}
@@ -436,11 +506,24 @@ export default function Home() {
                   )}
 
                   <div className="media-links">
-                    {ttResult.downloads && ttResult.downloads.map((item, i) => (
-                      <a key={i} className="dl-btn tt-dl-btn" href={item.url} target="_blank" rel="noopener noreferrer">
-                        🎬 Download Video (No Watermark)
+                    {ttResult.options?.map((item, i) => (
+                      <a key={i} className="dl-btn tt-dl-btn" href={item.dl}>
+                        {item.format === "mp3" ? "🎧" : "🎬"} {item.label}
                       </a>
                     ))}
+
+                    {ttResult.is_slide &&
+                      ttResult.images?.map((imgUrl, i) => (
+                        <a
+                          key={`slide-${i}`}
+                          className="dl-btn tt-dl-btn"
+                          href={imgUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          🖼️ Download Slide Image #{i + 1}
+                        </a>
+                      ))}
                   </div>
 
                   <button className="back-btn" onClick={() => { setTtResult(null); setTtError(""); setTtUrl(""); }}>
@@ -451,7 +534,7 @@ export default function Home() {
             </>
           )}
 
-          {/* ══ FACEBOOK TAB (Added) ══ */}
+          {/* ══ FACEBOOK TAB ══ */}
           {activeTab === "facebook" && (
             <>
               {!fbResult ? (
@@ -470,6 +553,11 @@ export default function Home() {
                 </>
               ) : (
                 <div className="result-area" style={{ borderTopColor: "rgba(24,119,242,0.25)" }}>
+                  {fbResult.thumbnail && (
+                    <div className="thumb-frame" style={{ borderColor: "rgba(24,119,242,0.3)" }}>
+                      <img className="thumb-img" src={fbResult.thumbnail} alt="fb-thumb" />
+                    </div>
+                  )}
                   {fbResult.title && (
                     <p className="video-title-text">
                       <span>Title:</span> {fbResult.title}
@@ -477,9 +565,15 @@ export default function Home() {
                   )}
 
                   <div className="media-links">
-                    {fbResult.downloads && fbResult.downloads.map((item, i) => (
-                      <a key={i} className="dl-btn fb-dl-btn" href={item.url} target="_blank" rel="noopener noreferrer">
-                        📘 Download {item.type}
+                    {fbResult.options?.map((item, i) => (
+                      <a
+                        key={i}
+                        className="dl-btn fb-dl-btn"
+                        href={item.dl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        📘 Download {item.label}
                       </a>
                     ))}
                   </div>
