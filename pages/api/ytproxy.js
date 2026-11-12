@@ -1,51 +1,94 @@
-const axios = require("axios");
+export const config = {
+  runtime: "edge",
+};
 
-export default async function handler(req, res) {
-  if (req.method !== "GET")
-    return res.status(405).json({ status: false, msg: "Method not allowed" });
+const ALLOWED_HOST_SUFFIXES = [
+  ".savetube.vip",
+  ".savetube.me",
+  ".googlevideo.com",
+  ".tiktokcdn-us.com",
+  ".tiktokcdn.com",
+  ".fbcdn.net",
+];
+
+function isAllowedUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:") return false;
+    return ALLOWED_HOST_SUFFIXES.some((suffix) =>
+      parsed.hostname.endsWith(suffix)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export default async function handler(req) {
+  if (req.method !== "GET") {
+    return new Response(JSON.stringify({ status: false, error: "Method not allowed" }), {
+      status: 405,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const url = searchParams.get("url");
+  const ext = searchParams.get("ext") === "mp3" ? "mp3" : "mp4";
+  const title = searchParams.get("title") || "vortex-download";
+
+  if (!url || !isAllowedUrl(url)) {
+    return new Response(
+      JSON.stringify({ status: false, error: "Invalid or unauthorized download URL" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   try {
-    const { url, ext, title } = req.query;
-    if (!url) throw new Error("Missing url");
-
-    const fileName = `${(title || "vortex-download").toString()}.${ext === "mp3" ? "mp3" : "mp4"}`;
-
-    // CDN එකට request කරන්නෙ ම්‍යූඡික් worker එකෙන්ම එනවා වගේ Referer/UA එකක් එක්කයි,
-    // ඒ නිසා hotlink/referrer check එකෙන් 400 එකක් එන්නෙ නෑ.
-    const upstream = await axios.get(url, {
-      responseType: "stream",
+    const upstream = await fetch(url, {
       headers: {
         "user-agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-        referer: "https://ytdl.udmodzz.workers.dev/",
-        origin: "https://ytdl.udmodzz.workers.dev",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        referer: "https://yt.savetube.me/",
+        origin: "https://yt.savetube.me",
       },
-      validateStatus: () => true,
     });
 
-    if (upstream.status < 200 || upstream.status >= 300) {
-      res.status(502).json({
-        status: false,
-        error: `Upstream file server returned ${upstream.status}`,
-      });
-      return;
+    if (!upstream.ok || !upstream.body) {
+      return new Response(
+        JSON.stringify({ status: false, error: "Failed to fetch file from CDN" }),
+        { status: 502, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    res.setHeader(
+    const safeFilename = `${title
+      .replace(/[\\/:*?"<>|\r\n]/g, "")
+      .trim()
+      .slice(0, 80) || "vortex-download"}.${ext}`;
+
+    const headers = new Headers();
+    headers.set(
       "Content-Type",
-      ext === "mp3" ? "audio/mpeg" : "video/mp4"
+      upstream.headers.get("content-type") || (ext === "mp3" ? "audio/mpeg" : "video/mp4")
     );
-    res.setHeader(
+    headers.set(
       "Content-Disposition",
-      `attachment; filename="${fileName.replace(/"/g, "")}"`
+      `attachment; filename*=UTF-8''${encodeURIComponent(safeFilename)}`
     );
-    if (upstream.headers["content-length"]) {
-      res.setHeader("Content-Length", upstream.headers["content-length"]);
+
+    const contentLength = upstream.headers.get("content-length");
+    if (contentLength) {
+      headers.set("Content-Length", contentLength);
     }
 
-    upstream.data.pipe(res);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ status: false, error: e.message });
+    // Stream එක කෙලින්ම user ගේ browser එකට pass කිරීම (Zero buffering on Vercel)
+    return new Response(upstream.body, {
+      status: 200,
+      headers,
+    });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ status: false, error: "Proxy stream error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }
